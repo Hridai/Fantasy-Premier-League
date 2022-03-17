@@ -8,8 +8,6 @@ been written to aid with the plotting so whether you are just running prototypes
 some sort of user interface or you are plotting to a specific axis in a chart grid	
 in a pdf output, this class can handle it.	
 """
-import log
-logger = log.setup('root')
 import os
 
 import matplotlib.pyplot as plt
@@ -79,7 +77,7 @@ class Issuer_line_fig():
             ax = self.ax
         if isinstance(self.bold_X, list) and isinstance(self.bold_y, list):
             if len(self.bold_X) != len(self.bold_y):
-                logger.error('X and Y arrays are mismatched - exiting!')
+                print('X and Y arrays are mismatched - exiting!')
                 return
             else:
                 for i, item in enumerate(self.bold_X):
@@ -94,7 +92,7 @@ class Issuer_line_fig():
         clr_A = RGB_colour_picker(204, 0, 0) # Inc Green for this one
         if isinstance(self.faint_X, list) and isinstance(self.faint_y, list):
             if len(self.faint_X) != len(self.faint_y):
-                logger.error('X and Y arrays are mismatched - exiting!')
+                print('X and Y arrays are mismatched - exiting!')
                 return
             else:
                 for i, item in enumerate(self.faint_X, 0):
@@ -296,7 +294,7 @@ class StatUtil():
             ax = ax_in
         if isinstance(X, list) and isinstance(Y, list):
             if len(X) != len(Y):
-                logger.error('X and Y arrays are mismatched - exiting!')
+                print('X and Y arrays are mismatched - exiting!')
                 return
             else:
                 for i, item in enumerate(X):
@@ -339,7 +337,7 @@ class StatUtil():
             ax = ax_in
         if isinstance(X, list) and isinstance(Y, list):
             if len(X) != len(Y):
-                logger.error('X and Y arrays are mismatched - exiting!')
+                print('X and Y arrays are mismatched - exiting!')
                 return
             else:
                 for i, item in enumerate(X):
@@ -383,7 +381,7 @@ class StatUtil():
             ax = ax_in
         if isinstance(X, list) and isinstance(Y, list):
             if len(X) != len(Y):
-                logger.error('X and Y arrays are mismatched - exiting!')
+                print('X and Y arrays are mismatched - exiting!')
                 return
             else:
                 for i, item in enumerate(X):
@@ -483,7 +481,7 @@ class StatUtil():
             Returns a figure object, useful for PyQT5 front end which can use this fig object.	
         """
         if len(coeffs_listoflist) != len(curvename_list):
-            logger.error(f'Curvename list dimension [{len(curvename_list)}] must equal coeffs dimension [{len(coeffs_listoflist)}]')
+            print(f'Curvename list dimension [{len(curvename_list)}] must equal coeffs dimension [{len(coeffs_listoflist)}]')
             return            
         fig, ax = plt.subplots(1,1)
         if ax_in is not None:
@@ -570,7 +568,7 @@ class StatUtil():
         """
         if isinstance(curvename_list, list):
             if len(coeffs_listoflist) != len(curvename_list):
-                logger.error(f'Curvename list dimension [{len(curvename_list)}] must equal coeffs dimension [{len(coeffs_listoflist)}]')
+                print(f'Curvename list dimension [{len(curvename_list)}] must equal coeffs dimension [{len(coeffs_listoflist)}]')
                 return            
         fig, ax = plt.subplots(1,1)
         if ax_in is not None:
@@ -661,7 +659,7 @@ class StatUtil():
         """
         if isinstance(curvename_list, list):
             if len(coeffs_listoflist) != len(curvename_list):
-                logger.error(f'Curvename list dimension [{len(curvename_list)}] must equal coeffs dimension [{len(coeffs_listoflist)}]')
+                print(f'Curvename list dimension [{len(curvename_list)}] must equal coeffs dimension [{len(coeffs_listoflist)}]')
                 return            
         fig, ax = plt.subplots(1,1)
         if ax_in is not None:
