@@ -12,10 +12,11 @@ table.
 from warnings import filterwarnings
 filterwarnings('ignore')
 from threading import Timer
+from ht_analysis.datautils import DataHelper
 import dash
 import numpy as np # CAN REMOVE THIS?
 from datetime import datetime
-from statutils import StatUtil
+from ht_analysis.statutils import StatUtil
 import webbrowser
 import dash_core_components as dcc
 import dash_html_components as html
@@ -26,21 +27,33 @@ import pandas as pd
 def open_browser(port):
     webbrowser.open_new(f'http://127.0.0.1:{port}/')
 
-# Global Variables - These can be abstracted to a 'User" table if everyone has different preferences
-# spread_curvename = 'Sector Treasury'
-# scores = [0,10,20,30,40,50,60,70,80,90,100]
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-# current_isin = 'AU3CB0249357'
-current_curve = 'Industry AU Banks'
-available_indicators_countries = ('AU','NZ')
-current_country = 'AU'
+
+dh = DataHelper()
+res = dh.get_gw_pl_superset()
+axes_choice = list(sorted(set(res.columns)))
+
+# axes_choice = ['player_name', 'assists_pl', 'bonus_pl', 'bps_pl', 'clean_sheets_pl', 
+#                'creativity_pl', 'element_pl', 'fixture_pl', 'goals_conceded_pl', 
+#                'goals_scored_pl', 'ict_index_pl', 'influence_pl', 'kickoff_time_pl', 
+#                'minutes_pl', 'opponent_team_pl', 'own_goals_pl', 'penalties_missed_pl', 
+#                'penalties_saved_pl', 'red_cards_pl', 'round', 'saves_pl', 'selected_pl', 
+#                'team_a_score_pl', 'team_h_score_pl', 'threat_pl', 'total_points_pl', 
+#                'transfers_balance_pl', 'transfers_in_pl', 'transfers_out_pl', 
+#                'value_pl', 'was_home_pl', 'yellow_cards_pl', 'name', 'position', 
+#                'team', 'xP', 'assists_gw', 'bonus_gw', 'bps_gw', 'clean_sheets_gw', 
+#                'creativity_gw', 'element_gw', 'fixture_gw', 'goals_conceded_gw', 
+#                'goals_scored_gw', 'ict_index_gw', 'influence_gw', 'kickoff_time_gw', 
+#                'minutes_gw', 'opponent_team_gw', 'own_goals_gw', 'penalties_missed_gw', 
+#                'penalties_saved_gw', 'red_cards_gw', 'saves_gw', 'selected_gw', 
+#                'team_a_score_gw', 'team_h_score_gw', 'threat_gw', 'total_points_gw', 
+#                'transfers_balance_gw', 'transfers_in_gw', 'transfers_out_gw', 
+#                'value_gw', 'was_home_gw', 'yellow_cards_gw', 'GW']
 
 alpha_marks = {-3: '0.001',-2: '0.01',-1: '0.1',0: '1',0.5: '5',1: '10',
                 2: '100'}
-
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 server = app.server
-
 app_color = {"graph_bg": "#ffd5cc", "graph_line": "#007ACE"}
 
 # To change the page background color:
@@ -59,29 +72,49 @@ app.layout = html.Div([
     html.Div([
         html.Div([
             dcc.Dropdown(
-                id='crossfilter-curvename',
-                options=[{'label': i, 'value': i} for i in [1,2,3]],
-                value=1
+                id='dropdown-axis1',
+                options=[{'label': i, 'value': i} for i in axes_choice],
+                value='value_gw'
             )
         ],
-        style={'width': '38%', 'display': 'inline-block'}),
+        style={'width': '22%', 'display': 'inline-block'}),
         
         html.Div([
             dcc.Dropdown(
-                id='crossfilter-country',
+                id='dropdown-axis2',
                 options=[{'label': i, 'value': i} for i in 
-                         available_indicators_countries],
-                value=current_country
+                         axes_choice],
+                value='total_points_gw'
             )
         ], style={'width': '22%', 'float': 'centre', 'display': 'inline-block'}),
     
         html.Div([
             dcc.Dropdown(
-                id='crossfilter-date',
-                options=[{'label': i, 'value': i} for i in [1,2,3,4]],
-                value = 2
+                id='dropdown-position',
+                options=[{'label': i, 'value': i} for i in list(sorted(set(res['position'])))],
+                value = '',
+                placeholder = 'Pos'
             )
-        ], style={'width': '40%', 'float': 'right', 'display': 'inline-block'})
+        ], style={'width': '11%', 'float': 'centre', 'display': 'inline-block'}),
+    
+        html.Div([
+            dcc.Dropdown(
+                id='dropdown-gw',
+                options=[{'label': i, 'value': i} for i in list(sorted(set(res['round'])))],
+                value = max(res['round'])
+            )
+        ], style={'width': '8%', 'float': 'centre', 'display': 'inline-block'}),
+        
+        html.Div([
+            dcc.Dropdown(
+                id='dropdown-team',
+                options=[{'label': i, 'value': i} for i in list(sorted(set(res['team'])))],
+                value = '',
+                placeholder = 'Team(s)',
+                multi=True
+            )
+        ], style={'width': '36%', 'float': 'centre', 'display': 'inline-block'}),
+        
     
     ], style={
         'borderBottom': 'thin lightgrey solid',
@@ -190,11 +223,7 @@ app.layout = html.Div([
     ], style={'display': 'inline-block', 'width': '40%',
               'height': '100%',"verticalAlign": "top"}),
 
-    html.Div(id='rvcurves-full-df', style={'display': 'none'}),
-    html.Div(id='durcurve-yield-history-df', style={'display': 'none'}),
-    html.Div(id='hyperparams-df', style={'display': 'none'}),
-    # Hyperparam values save in memory
-    html.Div(id='adj-hyperparams-df', style={'display': 'none'}),
+    html.Div(id='sub-df', style={'display': 'none'}),
 ])
 
 @app.callback(
@@ -222,32 +251,66 @@ def load_adjusted_hyperparameters(alpha, l1ratio, polydeg, xaxisthresh,
                           index = adjusted_hyperparams_dict.keys())
     return df_res.to_json(orient='split')
               
-@app.callback(
-    [dash.dependencies.Output('rvcurves-full-df', 'children'),
-     dash.dependencies.Output('durcurve-yield-history-df', 'children'),
-     dash.dependencies.Output('hyperparams-df', 'children')],
-    [dash.dependencies.Input('crossfilter-curvename', 'value'),
-     dash.dependencies.Input('crossfilter-country', 'value'),
-     dash.dependencies.Input('crossfilter-date', 'value')
-     ])
-def load_dataframes(curvename, country, date):
-    # date_object = datetime.strptime(date,'%Y-%m-%d')
-    return pd.DataFrame().to_json(orient='split'), \
-    pd.DataFrame().to_json(orient='split'), \
-    pd.DataFrame().to_json(orient='split')
+# @app.callback(
+    # [dash.dependencies.Output('full-df', 'children')],
+    # [dash.dependencies.Input('dropdown-axis1', 'value'),
+    #   dash.dependencies.Input('dropdown-axis2', 'value'),
+    #   dash.dependencies.Input('dropdown-gw', 'value')
+    #   ])
+# def load_dataframes(curvename, country, date):
+    # dh = DataHelper()
+    # res = dh.get_gw_pl_superset()
+    # return res.to_json(orient='split')
 
 @app.callback(
     dash.dependencies.Output('crossfilter-indicator-scatter', 'figure'),
-    [dash.dependencies.Input('rvcurves-full-df', 'children'),
-     dash.dependencies.Input('durcurve-yield-history-df', 'children'),
-     dash.dependencies.Input('hyperparams-df', 'children'),
-     dash.dependencies.Input('crossfilter-country', 'value'),
-     dash.dependencies.Input('crossfilter-curvename', 'value'),
-     dash.dependencies.Input('adj-hyperparams-df', 'children')])
-def update_main_scatter_graph(json_rvcurves_full, json_durcurve_hist,
-                 json_hyperparams, country, curvename, json_adj_hyperparams):
-    
-    return 0
+    [dash.dependencies.Input('dropdown-axis1', 'value'),
+      dash.dependencies.Input('dropdown-axis2', 'value'),
+      dash.dependencies.Input('dropdown-gw', 'value'),
+      dash.dependencies.Input('dropdown-team', 'value'),
+      dash.dependencies.Input('dropdown-position', 'value'),
+      ])
+def update_main_scatter_graph(axis1, axis2, gw, team, position):
+    sub_df = res[['player_name','team', 'position', axis1, axis2]].loc[res['round']==gw]
+    print(team)
+    if team:
+        sub_df = sub_df.loc[sub_df['team'].isin(team)]
+    if position:
+        sub_df = sub_df.loc[sub_df['position'] == position]
+    traces = []
+    traces.append(go.Scatter(x=sub_df[axis1],
+                                y=sub_df[axis2],
+                                text=sub_df['player_name'], 
+                                mode='markers',
+                                marker={
+                    'size': 11,
+                    'opacity': 0.3,
+                    'color': '#4d4fb1',
+                    'line': {'width': 2, 'color': '#240059'}
+                }))
+    return {
+        'data': traces,
+        'layout': dict(
+            xaxis={
+                'title': axis1,'type': 'linear'},
+            yaxis={
+                'title': axis2,'type': 'linear'},
+            margin={'l': 40, 'b': 30, 't': 10, 'r': 0},
+            legend={'xanchor':"center",
+                'yanchor':"top",
+                'y':-0.15,
+                'x':0.5,
+                'orientation':'h'},
+            height=450,
+            hovermode='closest',
+            clickmode='event+select',
+            title={'text': f"{axis1} vs {axis2} - GW {gw}",
+                'y':0.98,
+                'x':0.5,
+                'xanchor': 'center',
+                'yanchor': 'top'}
+        )
+    }
 
 if __name__ == '__main__':
     port = '8050'
