@@ -23,9 +23,30 @@ class DataHelper():
         for dirpath, dirnames, filenames in os.walk(fpath):
             if filename in filenames:
                 df = pd.read_csv(os.path.join(dirpath, filename))
-                pname = dirpath.split('\\')[-1].split('_')
-                pname = ' '.join(pname[0:-1])
+                filename_split = dirpath.split('\\')[-1].split('_')
+                pname = ' '.join(filename_split[0:-1])
+                p_id = int(filename_split[-1])
                 df.insert(0, 'player_name', pname)
+                df.insert(0, 'player_id', p_id)
+                df_res = pd.concat([df_res, df])
+        return df_res
+    
+    def get_player_understat_data(self):
+        subfolder = 'understat'
+        filename = 'gw.csv'
+        fpath = os.path.join(self.season_path, subfolder)
+        df_res = pd.DataFrame()
+        for dirpath, dirnames, filenames in os.walk(fpath):
+            for filename in filenames:
+                if 'understat_' in filename:
+                    continue
+                temp_path = os.path.join(dirpath, filename)
+                df = pd.read_csv(temp_path)
+                filename_split = temp_path.split('\\')[-1].split('_')
+                pname = ' '.join(filename_split[0:-1])
+                p_id = int(filename_split[-1][:-4]) # Strip out .csv at the end
+                df.insert(0, 'player_name', pname)
+                df.insert(0, 'player_id', p_id)
                 df_res = pd.concat([df_res, df])
         return df_res
     
@@ -36,14 +57,17 @@ class DataHelper():
     def get_gw_pl_superset(self):
         df_pl = self.get_player_agg_data()
         df_gw = self.get_gw_data()
+        # df_us = self.get_player_understat_data() # To be joined...
         joined_df = pd.merge(df_pl, 
                              df_gw, 
                              how='left', 
                              left_on = ['player_name','round'], 
                              right_on = ['name', 'round'],
                              suffixes = ("_pl","_gw"))
-        return joined_df
+        return joined_df.dropna().reset_index(drop=True)
 
 if __name__ == '__main__':
     dh = DataHelper()
-    res = dh.get_gw_pl_superset()
+    # res = dh.get_gw_pl_superset()
+    # res2 = dh.get_understat_summary_data()
+    # res3 = dh.get_player_understat_data()
