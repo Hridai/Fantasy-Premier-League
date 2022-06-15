@@ -5,7 +5,7 @@ import dash_html_components as html
 import base64
 
 from threading import Timer
-from ht_analysis.datautils import DataHelper
+from ht_analysis.datautils import DataUtils
 from plotly import graph_objects as go
 from warnings import filterwarnings
 filterwarnings('ignore')
@@ -20,8 +20,8 @@ server = app.server
 app.title = "FPL Algo"
 app_color = {"graph_bg": "#ffd5cc", "graph_line": "#007ACE"}
 
-dh = DataHelper()
-res = dh.get_gameweek_superset()
+du = DataUtils()
+res = du.get_gameweek_superset()
 axes_choice = list(sorted(set(res.columns)))
 pl_name = 'Kevin De Bruyne'
 
@@ -76,7 +76,7 @@ app.layout = html.Div([
         html.Div([
             dcc.Dropdown(
                 id='dropdown-position',
-                options=[{'label': i, 'value': i} for i in list(sorted(set(res['position'])))],
+                options=[{'label': i, 'value': i} for i in list(sorted(set(res['position_pl'])))],
                 value = '',
                 placeholder = 'Pos'
             )
@@ -139,13 +139,13 @@ app.layout = html.Div([
       dash.dependencies.Input('dropdown-position', 'value'),
       ])
 def update_main_scatter_graph(axis1, axis2, axis3, gw, team, position):
-    cols_to_pull = ['player_name_us','team', 'position', axis1, axis2]
+    cols_to_pull = ['player_name','team', 'position_pl', axis1, axis2]
     if axis3: cols_to_pull.append(axis3)
     sub_df = res[cols_to_pull].loc[res['round']==gw]
     if team:
         sub_df = sub_df.loc[sub_df['team'].isin(team)]
     if position:
-        sub_df = sub_df.loc[sub_df['position'] == position]
+        sub_df = sub_df.loc[sub_df['position_pl'] == position]
     traces = []
     titletext = f"{axis1} vs {axis2} - GW {gw}"
     if axis3:
@@ -153,7 +153,7 @@ def update_main_scatter_graph(axis1, axis2, axis3, gw, team, position):
         traces.append(go.Scatter3d(x=sub_df[axis1],
                                     y=sub_df[axis2],
                                     z=sub_df[axis3],
-                                    text=sub_df['player_name_us'], 
+                                    text=sub_df['player_name'], 
                                     mode='markers',
                                     marker={
                                     'size': 10,
@@ -161,12 +161,12 @@ def update_main_scatter_graph(axis1, axis2, axis3, gw, team, position):
                                     'color': '#4d4fb1',
                                     'line': {'width': 2, 'color': '#240059'}
                                     },
-                                    customdata=sub_df['player_name_us']),
+                                    customdata=sub_df['player_name']),
                       )
     else:
         traces.append(go.Scatter(x=sub_df[axis1],
                                     y=sub_df[axis2],
-                                    text=sub_df['player_name_us'], 
+                                    text=sub_df['player_name'], 
                                     mode='markers',
                                     marker={
                                     'size': 10,
@@ -174,7 +174,7 @@ def update_main_scatter_graph(axis1, axis2, axis3, gw, team, position):
                                     'color': '#4d4fb1',
                                     'line': {'width': 2, 'color': '#240059'}
                                     },
-                                    customdata=sub_df['player_name_us']),
+                                    customdata=sub_df['player_name']),
                       )
     return {
         'data': traces,
@@ -204,7 +204,7 @@ def update_main_scatter_graph(axis1, axis2, axis3, gw, team, position):
 def update_top_timeseries(hdata):
     '''Total points & mins played time series'''
     pl_name = hdata['points'][0]['customdata']
-    pl_df = res.loc[res['player_name_us'] == pl_name].reset_index(drop=True)
+    pl_df = res.loc[res['player_name'] == pl_name].reset_index(drop=True)
     title = pl_name
     traces = []
     traces.append(dict(
@@ -257,7 +257,7 @@ def update_top_timeseries(hdata):
 def update_second_timeseries(hdata):
     '''Goals scored / assists time series'''
     pl_name = hdata['points'][0]['customdata']
-    pl_df = res.loc[res['player_name_us'] == pl_name].reset_index(drop=True)
+    pl_df = res.loc[res['player_name'] == pl_name].reset_index(drop=True)
     traces = []
     traces.append(dict(
         x = pl_df['round'],
@@ -321,7 +321,7 @@ def update_second_timeseries(hdata):
 def update_third_timeseries(hdata):
     '''Transfers in / out timeseries'''
     pl_name = hdata['points'][0]['customdata']
-    pl_df = res.loc[res['player_name_us'] == pl_name].reset_index(drop=True)
+    pl_df = res.loc[res['player_name'] == pl_name].reset_index(drop=True)
     traces = []
     traces.append(dict(
         x = pl_df['round'],
