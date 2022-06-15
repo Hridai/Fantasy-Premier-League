@@ -17,10 +17,11 @@ def open_browser(port):
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 server = app.server
+app.title = "FPL Algo"
 app_color = {"graph_bg": "#ffd5cc", "graph_line": "#007ACE"}
 
 dh = DataHelper()
-res = dh.get_gw_pl_superset()
+res = dh.get_gameweek_superset()
 axes_choice = list(sorted(set(res.columns)))
 pl_name = 'Kevin De Bruyne'
 
@@ -38,7 +39,7 @@ app.layout = html.Div([
                 
             html.Div(
                 [
-                html.H4("FPL Viz & Solver Tool"),
+                html.H4("FPL Algo"),
                 html.P(
                     "Plot your next FPL transfer. Literally.")
                 ],style={'display': 'inline-block'}),
@@ -48,7 +49,7 @@ app.layout = html.Div([
             dcc.Dropdown(
                 id='dropdown-axis1',
                 options=[{'label': i, 'value': i} for i in axes_choice],
-                value='value_gw'
+                value='value'
             )
         ],
         style={'width': '14%', 'display': 'inline-block'}),
@@ -58,7 +59,7 @@ app.layout = html.Div([
                 id='dropdown-axis2',
                 options=[{'label': i, 'value': i} for i in 
                          axes_choice],
-                value='total_points_gw'
+                value='total_points'
             )
         ], style={'width': '14%', 'float': 'centre', 'display': 'inline-block'}),
         
@@ -138,7 +139,7 @@ app.layout = html.Div([
       dash.dependencies.Input('dropdown-position', 'value'),
       ])
 def update_main_scatter_graph(axis1, axis2, axis3, gw, team, position):
-    cols_to_pull = ['player_name','team', 'position', axis1, axis2]
+    cols_to_pull = ['player_name_us','team', 'position', axis1, axis2]
     if axis3: cols_to_pull.append(axis3)
     sub_df = res[cols_to_pull].loc[res['round']==gw]
     if team:
@@ -152,7 +153,7 @@ def update_main_scatter_graph(axis1, axis2, axis3, gw, team, position):
         traces.append(go.Scatter3d(x=sub_df[axis1],
                                     y=sub_df[axis2],
                                     z=sub_df[axis3],
-                                    text=sub_df['player_name'], 
+                                    text=sub_df['player_name_us'], 
                                     mode='markers',
                                     marker={
                                     'size': 10,
@@ -160,12 +161,12 @@ def update_main_scatter_graph(axis1, axis2, axis3, gw, team, position):
                                     'color': '#4d4fb1',
                                     'line': {'width': 2, 'color': '#240059'}
                                     },
-                                    customdata=sub_df['player_name']),
+                                    customdata=sub_df['player_name_us']),
                       )
     else:
         traces.append(go.Scatter(x=sub_df[axis1],
                                     y=sub_df[axis2],
-                                    text=sub_df['player_name'], 
+                                    text=sub_df['player_name_us'], 
                                     mode='markers',
                                     marker={
                                     'size': 10,
@@ -173,7 +174,7 @@ def update_main_scatter_graph(axis1, axis2, axis3, gw, team, position):
                                     'color': '#4d4fb1',
                                     'line': {'width': 2, 'color': '#240059'}
                                     },
-                                    customdata=sub_df['player_name']),
+                                    customdata=sub_df['player_name_us']),
                       )
     return {
         'data': traces,
@@ -189,7 +190,7 @@ def update_main_scatter_graph(axis1, axis2, axis3, gw, team, position):
                 'orientation':'h'},
             height=450,
             hovermode='closest',
-            title={'text': f"{axis1} vs {axis2} - GW {gw}",
+            title={'text': titletext,
                 'y':0.98,
                 'x':0.5,
                 'xanchor': 'center',
@@ -201,13 +202,14 @@ def update_main_scatter_graph(axis1, axis2, axis3, gw, team, position):
     dash.dependencies.Output('timeseries-1', 'figure'),
     [dash.dependencies.Input('main-scatter', 'hoverData')])
 def update_top_timeseries(hdata):
+    '''Total points & mins played time series'''
     pl_name = hdata['points'][0]['customdata']
-    pl_df = res.loc[res['player_name'] == pl_name].reset_index(drop=True)
+    pl_df = res.loc[res['player_name_us'] == pl_name].reset_index(drop=True)
     title = pl_name
     traces = []
     traces.append(dict(
         x = pl_df['round'],
-        y = pl_df['total_points_gw'],
+        y = pl_df['total_points'],
         mode='lines+markers',
         color='#5269d1',
         name='Total Pts',
@@ -218,7 +220,7 @@ def update_top_timeseries(hdata):
             'line': {'width': 2, 'color': '#5269d1'}}))
     traces.append(dict(
         x = pl_df['round'],
-        y = pl_df['minutes_gw'],
+        y = pl_df['minutes'],
         mode='lines+markers',
         color='#6ec0ff',
         name='Mins Played',
@@ -253,12 +255,13 @@ def update_top_timeseries(hdata):
     dash.dependencies.Output('timeseries-2', 'figure'),
     [dash.dependencies.Input('main-scatter', 'hoverData')])
 def update_second_timeseries(hdata):
+    '''Goals scored / assists time series'''
     pl_name = hdata['points'][0]['customdata']
-    pl_df = res.loc[res['player_name'] == pl_name].reset_index(drop=True)
+    pl_df = res.loc[res['player_name_us'] == pl_name].reset_index(drop=True)
     traces = []
     traces.append(dict(
         x = pl_df['round'],
-        y = pl_df['goals_scored_gw'],
+        y = pl_df['goals_scored'],
         mode='lines+markers',
         color='#5269d1',
         name='Goals',
@@ -269,7 +272,7 @@ def update_second_timeseries(hdata):
             'line': {'width': 2, 'color': '#5269d1'}}))
     traces.append(dict(
         x = pl_df['round'],
-        y = pl_df['assists_gw'],
+        y = pl_df['assists_pl'],
         mode='lines+markers',
         color='#990e1c',
         name='Assists',
@@ -280,7 +283,7 @@ def update_second_timeseries(hdata):
             'line': {'width': 2, 'color': '#990e1c'}}))
     traces.append(dict(
         x = pl_df['round'],
-        y = pl_df['clean_sheets_gw'],
+        y = pl_df['clean_sheets'],
         mode='markers',
         color='#3a55c9',
         name='Clean Sheet',
@@ -295,10 +298,12 @@ def update_second_timeseries(hdata):
         'layout': {
             'height': 225,
             'margin': {'l': 40, 'b': 30, 'r': 40, 't': 10},
+            'text': '',
             'annotations': [{
                 'x': 0, 'y': 0.85, 'xanchor': 'left', 'yanchor': 'bottom',
                 'xref': 'paper', 'yref': 'paper', 'showarrow': False,
-                'align': 'left', 'bgcolor': 'rgba(255, 255, 255, 0.5)'
+                'align': 'left', 'bgcolor': 'rgba(255, 255, 255, 0.5)',
+                'text': ''
             }],
             'xaxis': {'showgrid': False},
             'yaxis1': {'title': 'Goals / Assists', 'side':'left', 'titlefont': {'color': '#5269d1'}},
@@ -313,13 +318,14 @@ def update_second_timeseries(hdata):
 @app.callback(
     dash.dependencies.Output('timeseries-3', 'figure'),
     [dash.dependencies.Input('main-scatter', 'hoverData')])
-def update_second_timeseries(hdata):
+def update_third_timeseries(hdata):
+    '''Transfers in / out timeseries'''
     pl_name = hdata['points'][0]['customdata']
-    pl_df = res.loc[res['player_name'] == pl_name].reset_index(drop=True)
+    pl_df = res.loc[res['player_name_us'] == pl_name].reset_index(drop=True)
     traces = []
     traces.append(dict(
         x = pl_df['round'],
-        y = pl_df['transfers_in_gw'],
+        y = pl_df['transfers_in'],
         mode='lines+markers',
         color='#5269d1',
         name='Transfers In',
@@ -330,7 +336,7 @@ def update_second_timeseries(hdata):
             'line': {'width': 2, 'color': '#5269d1'}}))
     traces.append(dict(
         x = pl_df['round'],
-        y = pl_df['transfers_out_gw'],
+        y = pl_df['transfers_out'],
         mode='lines+markers',
         color='#990e1c',
         name='Transfers Out',
@@ -347,7 +353,8 @@ def update_second_timeseries(hdata):
             'annotations': [{
                 'x': 0, 'y': 0.85, 'xanchor': 'left', 'yanchor': 'bottom',
                 'xref': 'paper', 'yref': 'paper', 'showarrow': False,
-                'align': 'left', 'bgcolor': 'rgba(255, 255, 255, 0.5)'
+                'align': 'left', 'bgcolor': 'rgba(255, 255, 255, 0.5)',
+                'text' : ''
             }],
             'xaxis': {'title': 'GW', 'showgrid': False},
             'yaxis1': {'title': 'Transfers', 'side':'left', 'titlefont': {'color': '#5269d1'}},
